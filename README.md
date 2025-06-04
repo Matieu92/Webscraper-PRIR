@@ -19,3 +19,4 @@ Rozproszona aplikacja do scrapowania stron internetowych, która wyciąga e-mail
 - Sebastian Miler, Mateusz Brodzik
 
 ## Złożenie
+- Demonstracja: Czerwiec 2025
