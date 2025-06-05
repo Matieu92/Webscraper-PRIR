@@ -5,6 +5,7 @@ from bs4 import BeautifulSoup, XMLParsedAsHTMLWarning
 import warnings
 from urllib.parse import urljoin, urlparse
 import re
+from pymongo import MongoClient
 
 warnings.filterwarnings("ignore", category=XMLParsedAsHTMLWarning)
 
@@ -20,7 +21,7 @@ async def fetch(url, session, visited=None, all_data=None, emails=None):
     visited.add(url)
 
     try:
-        async with session.get(url, timeout=10) as response:
+        async with session.get(url, timeout=30) as response:
             if response.status != 200:
                 all_data.append({'url': url, 'status': response.status})
                 return
@@ -107,8 +108,24 @@ def run_scraper(all_urls, num_processes=None):
 
     return list(merged_emails)
 
+def save_to_mongo(emails):
+    try:
+        client = MongoClient("")
+        db = client["scraperPRIR"]
+        collection = db["emaile"]
+
+        for email in emails:
+            collection.update_one(
+                {"email": email}, 
+                {"$setOnInsert": {"email": email}}, 
+                upsert=True
+            )
+        print(f"Zapisano {len(emails)} adresów do Mongo")
+    except Exception as e:
+        print(f"Błąd zapisu: {e}")
+
 if __name__ == "__main__":
     urls = [
     ]
     emails = run_scraper(urls)
-    print("E-maile:", emails)
+    save_to_mongo(emails)
