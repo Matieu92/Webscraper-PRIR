@@ -110,7 +110,7 @@ def run_scraper(all_urls, num_processes=None):
 
 def save_to_mongo(emails):
     try:
-        client = MongoClient("")
+        client = MongoClient("mongodb://mongo:27017")
         db = client["scraperPRIR"]
         collection = db["emaile"]
 

@@ -1,0 +1,31 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "5000:5000"
+    volumes:
+      - .:/app
+    depends_on:
+      - mongo
+    environment:
+      - FLASK_ENV=development
+    networks:
+      - scraper-21277-21219
+
+  mongo:
+    image: mongo:latest
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    networks:
+      - scraper-21277-21219
+
+networks:
+  scraper-21277-21219:
+    driver: bridge
+
+volumes:
+  mongo-data:
