@@ -1,18 +1,16 @@
 {% extends 'base.html' %}
 
 {% block header %}
-  <h1>{% block title %}Results for {{ data.url }}{% endblock %}</h1>
+  <h1>{% block title %}Results for {{ current_scraped_domain }}{% endblock %}</h1>
 {% endblock %}
 
 {% block content %}
-  {% if data.emails %}
-    <ul>
-      {% for email in data.emails %}
-        <li>{{ email['email'] }}</li>
-      {% endfor %}
-    </ul>
-  {% else %}
-    <p>No emails found for this URL.</p>
-  {% endif %}
-  <a href="{{ url_for('scraper.scraper_index') }}">Back</a>
+  <p>Select the type of data you want to view for the domain: <strong>{{ current_scraped_domain }}</strong></p>
+  <ul>
+    <li><a href="{{ url_for('scraper.scraper_results_emails', scraped_domain_url=current_scraped_domain) }}">View Emails</a></li>
+    <li><a href="{{ url_for('scraper.scraper_results_postal_codes', scraped_domain_url=current_scraped_domain) }}">View Postal Codes & Cities</a></li>
+    <li><a href="{{ url_for('scraper.scraper_results_social_media', scraped_domain_url=current_scraped_domain) }}">View Social Media Links</a></li>
+  </ul>
+  <hr>
+  <a href="{{ url_for('scraper.scraper_index') }}">Back to Scraped Domains List</a>
 {% endblock %}

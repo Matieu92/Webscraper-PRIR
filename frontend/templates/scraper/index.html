@@ -1,15 +1,19 @@
 {% extends 'base.html' %}
 
+{% block header %}
+  <h1>{% block title %}Scraped Site Domains{% endblock %}</h1>
+{% endblock %}
+
 {% block content %}
-    <h1>Scraped URLs</h1>
     {% if urls %}
+        <p>Showing domains for which data has been found. Click "View Results" to see details.</p>
         <ul>
-        {% for url in urls %}
-            <li>{{ url }} <a href="{{ url_for('scraper.scraper_results', url=url) }}">View Results</a></li>
+        {% for site_domain in urls %}
+            <li>{{ site_domain }} <a href="{{ url_for('scraper.scraper_results', scraped_domain_url=site_domain) }}">View Results</a></li>
         {% endfor %}
         </ul>
     {% else %}
-        <p>No URLs scraped yet.</p>
+        <p>No URLs scraped yet or no data found for any domains.</p>
     {% endif %}
     <a href="{{ url_for('scraper.scraper_scrape') }}">Scrape New URL</a>
 {% endblock %}

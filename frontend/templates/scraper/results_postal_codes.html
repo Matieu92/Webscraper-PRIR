@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+
+{% block header %}
+  <h1>{% block title %}Postal Codes & Cities for {{ current_scraped_domain }}{% endblock %}</h1>
+{% endblock %}
+
+{% block content %}
+  <h2>Postal Codes and Cities found associated with domain: {{ current_scraped_domain }}</h2>
+  {% if postal_codes %}
+    <ul>
+      {% for item in postal_codes %}
+        <li>
+          Code: <strong>{{ item.code }}</strong>
+          {% if item.locality %}
+            - City: {{ item.locality }}
+          {% else %}
+            - <em>(No specific city found with this code on the page)</em>
+          {% endif %}
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p>No postal codes or cities found for this domain.</p>
+  {% endif %}
+  <hr>
+  <p>
+    <a href="{{ url_for('scraper.scraper_results', scraped_domain_url=current_scraped_domain) }}">Back to Data Types for {{ current_scraped_domain }}</a><br>
+    <a href="{{ url_for('scraper.scraper_index') }}">Back to Scraped Domains List</a>
+  </p>
+{% endblock %}

@@ -20,12 +20,6 @@ def create_app(test_config=None):
     except OSError:
         print(f"Instance path already exists: {app.instance_path}")  # Debug
 
-    from . import auth
-    print("Registering bpUser")  # Debug
-    app.register_blueprint(auth.bpUser)
-    print("Registering bpAdmin")  # Debug
-    app.register_blueprint(auth.bpAdmin)
-
     from . import scraper
     print("Registering scraper")  # Debug
     app.register_blueprint(scraper.bp)

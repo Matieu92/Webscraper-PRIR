@@ -6,8 +6,8 @@
 
 {% block content %}
   <form method="post">
-    <label for="url">Website URL</label>
-    <input name="url" id="url" required>
-    <input type="submit" value="Scrape">
+    <label for="url">Website URL (must start with http:// or https://)</label>
+    <input name="url" id="url" required pattern="https?://.+" placeholder="e.g., https://example.com">
+    <input type="submit" value="Add to Scraping Queue">
   </form>
 {% endblock %}
