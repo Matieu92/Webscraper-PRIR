@@ -1,9 +1,9 @@
 from flask import Blueprint, flash, g, redirect, render_template, request, url_for
 from .auth import login_required
 from pymongo import MongoClient
+import os
 import sys
 sys.path.append('/app')  # Dodanie ścieżki do korzenia projektu
-from engine.engine import run_scraper  # Bezwzględny import
 
 print("Loading scraper.py")  # Debug
 
@@ -26,31 +26,26 @@ def index():
 def scrape():
     print("Accessing scrape view")  # Debug
     if request.method == 'POST':
-        url = request.form['url']
+        url = request.form.get('url')  # Użycie .get() dla bezpieczeństwa
+        print(f"Received URL: {url}")  # Debug
         error = None
 
         if not url:
             error = 'URL is required.'
-
-        if error is None:
-            flash(error)
         else:
+            queue_file = '/app/shared_queue_dir/queue.txt'
             try:
-                emails = run_scraper([url])
-                if emails:
-                    for email in emails:
-                        emaile_collection.update_one(
-                            {"email": email, "url": url},
-                            {"$setOnInsert": {"email": email, "url": url}},
-                            upsert=True
-                        )
-                    flash(f'Scraping completed successfully. Found {len(emails)} emails.')
-                else:
-                    flash('No emails found.')
-                return redirect(url_for('scraper.scraper_index'))  # Zaktualizowano na nowy endpoint
+                with open(queue_file, 'a') as f:
+                    f.write(f"{url}\n")
+                print(f"Added URL {url} to queue file")  # Debug
+                flash('Scraping started. Check results later.')
+                return redirect(url_for('scraper.scraper_index'))
             except Exception as e:
-                flash(f'Error during scraping: {str(e)}')
-                print(f"Scraping error: {str(e)}")  # Debug
+                error = f'Error adding to queue: {str(e)}'
+                print(f"Queue error: {str(e)}")  # Debug
+
+        if error:
+            flash(error)
 
     return render_template('scraper/scrape.html')
 
@@ -60,5 +55,5 @@ def results(url):
     emails = list(emaile_collection.find({'url': url}))
     if not emails:
         flash('No emails found for this URL.')
-        return redirect(url_for('scraper.scraper_index'))  # Zaktualizowano na nowy endpoint
+        return redirect(url_for('scraper.scraper_index'))
     return render_template('scraper/results.html', data={'url': url, 'emails': emails})

@@ -1,3 +1,4 @@
+import os
 import asyncio
 import aiohttp
 import multiprocessing
@@ -6,6 +7,7 @@ import warnings
 from urllib.parse import urljoin, urlparse
 import re
 from pymongo import MongoClient
+import time
 
 warnings.filterwarnings("ignore", category=XMLParsedAsHTMLWarning)
 
@@ -16,9 +18,11 @@ async def fetch(url, session, visited=None, all_data=None, emails=None):
     if all_data is None:
         all_data = []
     if emails is None:
-        emails = set()
+        emails = {} 
     
     visited.add(url)
+
+    base_domain = urlparse(url).netloc
 
     try:
         async with session.get(url, timeout=30) as response:
@@ -39,14 +43,15 @@ async def fetch(url, session, visited=None, all_data=None, emails=None):
                     email = href.replace('mailto:', '').strip()
                     email = email.split('?')[0].strip()
                     if email and '@' in email:
-                        emails.add(email)
-            
+                        emails[email] = base_domain
+                                
             # e-mail regex
             page_text = soup.get_text(separator=' ', strip=True)
             email_pattern = r'\b[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\b'
             found_emails = re.findall(email_pattern, page_text)
             for email in found_emails:
-                emails.add(email)
+                if email and '@' in email:
+                    emails[email] = base_domain
 
             # zebrane dane
             all_data.append({
@@ -55,7 +60,6 @@ async def fetch(url, session, visited=None, all_data=None, emails=None):
             })
 
             # poszukiwanie podstron
-            base_domain = urlparse(url).netloc
             sub_urls = []
             for link in soup.find_all('a', href=True):
                 href = link['href']
@@ -78,12 +82,12 @@ async def fetch(url, session, visited=None, all_data=None, emails=None):
 # async taski zbierajace dane, jedna sesja TCP
 async def fetch_all(urls):
     all_data = []
-    emails = set()
+    emails = {}
     async with aiohttp.ClientSession() as session:
         tasks = [fetch(url, session, all_data=all_data, emails=emails) 
                  for url in urls]
         await asyncio.gather(*tasks)
-    return list(emails)
+    return emails
 
 # petla zbierajaca dane
 def process_urls(urls):
@@ -102,11 +106,11 @@ def run_scraper(all_urls, num_processes=None):
 
     # scalanie wynikow z watkow
     merged_data = []
-    merged_emails = set()
+    merged_emails = {}
     for emails in results:
         merged_emails.update(emails)
 
-    return list(merged_emails)
+    return merged_emails
 
 def save_to_mongo(emails):
     try:
@@ -114,18 +118,46 @@ def save_to_mongo(emails):
         db = client["scraperPRIR"]
         collection = db["emaile"]
 
-        for email in emails:
+        count = 0
+        for email, url in emails.items():
             collection.update_one(
-                {"email": email}, 
-                {"$setOnInsert": {"email": email}}, 
+                {"email": email},
+                {"$setOnInsert": {"email": email, "url": url}},
                 upsert=True
             )
-        print(f"Zapisano {len(emails)} adresów do Mongo")
+            count += 1
+        print(f"Zapisano {count} adresów do Mongo")
     except Exception as e:
         print(f"Błąd zapisu: {e}")
+    finally:
+        client.close()
+
+def check_queue():
+    queue_file = '/app/shared_queue_dir/queue.txt'
+    processed_urls = set()
+
+    while True:
+        if os.path.exists(queue_file):
+            with open(queue_file, 'r') as f:
+                urls = [url.strip() for url in f.readlines() if url.strip() and url.strip() not in processed_urls]
+            
+            if urls:
+                print(f"Processing URLs from queue: {urls}")  # Debug
+                emails = run_scraper(urls)
+                print(f"Emails after processing: {emails}")  # Debug
+                if emails and any(emails.values()):  # Sprawdzenie, czy są jakiekolwiek emaili
+                    save_to_mongo(emails)
+                else:
+                    print("No emails found for processed URLs")  # Debug
+                processed_urls.update(urls)
+                
+                with open(queue_file, 'r') as f:
+                    all_lines = f.readlines()
+                with open(queue_file, 'w') as f:
+                    f.writelines(line for line in all_lines if line.strip() not in processed_urls)
+        
+        time.sleep(5)  # Sprawdzanie co 5 sekund
 
 if __name__ == "__main__":
-    urls = [
-    ]
-    emails = run_scraper(urls)
-    save_to_mongo(emails)
+    print("Engine started, monitoring queue...")
+    check_queue()

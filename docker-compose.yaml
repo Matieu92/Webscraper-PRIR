@@ -5,12 +5,24 @@ services:
       dockerfile: Dockerfile
     ports:
       - "5000:5000"
-    volumes:
-      - .:/app
     depends_on:
       - mongo
+    volumes:
+      - queue_storage:/app/shared_queue_dir
     environment:
       - FLASK_ENV=development
+    networks:
+      - scraper-21277-21219
+
+  engine:
+    build:
+      context: .
+      dockerfile: Dockerfile 
+    command: python /app/engine/engine.py
+    depends_on:
+      - mongo
+    volumes:
+      - queue_storage:/app/shared_queue_dir
     networks:
       - scraper-21277-21219
 
@@ -29,3 +41,4 @@ networks:
 
 volumes:
   mongo-data:
+  queue_storage:
